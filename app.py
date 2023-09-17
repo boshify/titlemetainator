@@ -3,10 +3,12 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import base64
+from concurrent.futures import ThreadPoolExecutor
 
 st.title('URL Metadata Extractor')
 
-@st.cache
+MAX_THREADS = 10
+
 def extract_metadata(url):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -15,11 +17,15 @@ def extract_metadata(url):
     }
     
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()  # Raise an exception for HTTP errors
+    except requests.HTTPError as http_err:
+        if response.status_code == 404:
+            return url, "Not Found", "Not Found"
+        else:
+            return url, f"HTTP error occurred: {http_err}", None
     except requests.RequestException as e:
-        st.error(f"Error fetching URL {url}: {e}")
-        return None, None
+        return url, f"Error occurred: {e}", None
 
     soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -27,7 +33,7 @@ def extract_metadata(url):
     meta_description = soup.find('meta', attrs={"name": "description"})
     meta_content = meta_description['content'] if meta_description else None
 
-    return title, meta_content
+    return url, title, meta_content
 
 def get_csv_download_link(df):
     csv = df.to_csv(index=False)
@@ -38,24 +44,24 @@ uploaded_file = st.file_uploader("Upload a CSV file:", type=['csv'])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    urls = df.iloc[:, 0].tolist()  # Fetching the first column
+    urls = df.iloc[:, 0].dropna().tolist()  # Fetching the first column and dropping blank rows
 
-    titles = []
-    meta_descriptions = []
+    data = {'URL': [], 'Title': [], 'Meta Description': []}
 
-    for url in urls:
-        title, meta_description = extract_metadata(url)
-        titles.append(title)
-        meta_descriptions.append(meta_description)
+    with st.spinner("Fetching metadata..."):
+        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            progress_bar = st.progress(0)
+            for i, (url, title, meta_description) in enumerate(executor.map(extract_metadata, urls)):
+                data['URL'].append(url)
+                data['Title'].append(title)
+                data['Meta Description'].append(meta_description)
 
-    df_output = pd.DataFrame({
-        'URL': urls,
-        'Title': titles,
-        'Meta Description': meta_descriptions
-    })
+                # Update the progress bar
+                progress = int(100 * (i+1) / len(urls))
+                progress_bar.progress(progress)
 
-    st.write(df_output)
-    st.markdown(get_csv_download_link(df_output), unsafe_allow_html=True)
+    st.write(pd.DataFrame(data))
+    st.markdown(get_csv_download_link(pd.DataFrame(data)), unsafe_allow_html=True)
 
 # About the App section in the sidebar
 st.sidebar.header("About the App")
