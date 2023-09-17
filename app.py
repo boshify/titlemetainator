@@ -5,7 +5,7 @@ import pandas as pd
 import base64
 from concurrent.futures import ThreadPoolExecutor
 
-st.title('URL Metadata Extractor')
+st.title('The TitleMetaInator')
 
 MAX_THREADS = 10
 
@@ -64,7 +64,7 @@ if uploaded_file:
     st.markdown(get_csv_download_link(pd.DataFrame(data)), unsafe_allow_html=True)
 
 # About the App section in the sidebar
-st.sidebar.header("About the App")
+st.sidebar.header("About the TitleMetaInator")
 st.sidebar.text("This app extracts the title and meta description for each URL from a CSV file.")
-st.sidebar.text("Powered by AI for SEO strategies.")
+st.sidebar.text("Made by Jonathan Boshoff. Get more AI SEO strategies at:")
 st.sidebar.markdown("[jonathanboshoff.com](https://jonathanboshoff.com)")
