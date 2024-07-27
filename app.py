@@ -18,12 +18,9 @@ def extract_metadata(url):
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()  # Raise an exception for HTTP errors
+        response.raise_for_status()
     except requests.HTTPError as http_err:
-        if response.status_code == 404:
-            return url, "Not Found", "Not Found"
-        else:
-            return url, f"HTTP error occurred: {http_err}", None
+        return url, f"HTTP error occurred: {http_err}", None
     except requests.RequestException as e:
         return url, f"Error occurred: {e}", None
 
@@ -44,7 +41,7 @@ uploaded_file = st.file_uploader("Upload a CSV file:", type=['csv'])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    urls = df.iloc[:, 0].dropna().tolist()  # Fetching the first column and dropping blank rows
+    urls = df.iloc[:, 0].dropna().tolist()
 
     data = {'URL': [], 'Title': [], 'Meta Description': []}
 
@@ -56,14 +53,12 @@ if uploaded_file:
                 data['Title'].append(title)
                 data['Meta Description'].append(meta_description)
 
-                # Update the progress bar
                 progress = int(100 * (i+1) / len(urls))
                 progress_bar.progress(progress)
 
     st.write(pd.DataFrame(data))
     st.markdown(get_csv_download_link(pd.DataFrame(data)), unsafe_allow_html=True)
 
-# About the App section in the sidebar
 st.sidebar.header("About the TitleMetaInator")
 st.sidebar.text("This app extracts the title and meta description for each URL from a CSV file.")
 st.sidebar.text("Made by Jonathan Boshoff. Get more AI SEO strategies at:")
