@@ -37,11 +37,19 @@ def get_csv_download_link(df):
     b64 = base64.b64encode(csv.encode()).decode()
     return f'<a href="data:file/csv;base64,{b64}" download="extracted_metadata.csv">Download CSV file</a>'
 
+# Instructions section
+st.header("Instructions")
+st.write("""
+1. **Upload a CSV file** containing a single column with the header `URL`. 
+2. Each row in this column should contain a full URL (including `http` or `https`) from which you want to extract the title and meta description.
+3. The app will process these URLs and provide a downloadable CSV file with the extracted metadata.
+""")
+
 uploaded_file = st.file_uploader("Upload a CSV file:", type=['csv'])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    urls = df.iloc[:, 0].dropna().tolist()
+    urls = df['URL'].dropna().tolist()  # Fetching the first column and dropping blank rows
 
     data = {'URL': [], 'Title': [], 'Meta Description': []}
 
@@ -53,12 +61,14 @@ if uploaded_file:
                 data['Title'].append(title)
                 data['Meta Description'].append(meta_description)
 
+                # Update the progress bar
                 progress = int(100 * (i+1) / len(urls))
                 progress_bar.progress(progress)
 
     st.write(pd.DataFrame(data))
     st.markdown(get_csv_download_link(pd.DataFrame(data)), unsafe_allow_html=True)
 
+# About the App section in the sidebar
 st.sidebar.header("About the TitleMetaInator")
 st.sidebar.text("This app extracts the title and meta description for each URL from a CSV file.")
 st.sidebar.text("Made by Jonathan Boshoff. Get more AI SEO strategies at:")
