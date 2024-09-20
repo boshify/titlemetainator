@@ -40,7 +40,7 @@ def get_csv_download_link(df):
 # Instructions section
 st.header("Instructions")
 st.write("""
-1. **Upload a CSV file** containing a single column with the header `URL`. 
+1. **Upload a CSV file**. The app will automatically extract URLs from the first column.
 2. Each row in this column should contain a full URL (including `http` or `https`) from which you want to extract the title and meta description.
 3. The app will process these URLs and provide a downloadable CSV file with the extracted metadata.
 """)
@@ -50,28 +50,25 @@ uploaded_file = st.file_uploader("Upload a CSV file:", type=['csv'])
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    # Check if the 'URL' column is present
-    if 'URL' not in df.columns:
-        st.error("The CSV file does not contain a column named 'URL'. Please upload a valid file.")
-    else:
-        urls = df['URL'].dropna().tolist()  # Fetching the first column and dropping blank rows
+    # Fetch the first column (ignoring the header)
+    urls = df.iloc[:, 0].dropna().tolist()  # Fetching the first column and dropping blank rows
 
-        data = {'URL': [], 'Title': [], 'Meta Description': []}
+    data = {'URL': [], 'Title': [], 'Meta Description': []}
 
-        with st.spinner("Fetching metadata..."):
-            with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-                progress_bar = st.progress(0)
-                for i, (url, title, meta_description) in enumerate(executor.map(extract_metadata, urls)):
-                    data['URL'].append(url)
-                    data['Title'].append(title)
-                    data['Meta Description'].append(meta_description)
+    with st.spinner("Fetching metadata..."):
+        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            progress_bar = st.progress(0)
+            for i, (url, title, meta_description) in enumerate(executor.map(extract_metadata, urls)):
+                data['URL'].append(url)
+                data['Title'].append(title)
+                data['Meta Description'].append(meta_description)
 
-                    # Update the progress bar
-                    progress = int(100 * (i+1) / len(urls))
-                    progress_bar.progress(progress)
+                # Update the progress bar
+                progress = int(100 * (i+1) / len(urls))
+                progress_bar.progress(progress)
 
-        st.write(pd.DataFrame(data))
-        st.markdown(get_csv_download_link(pd.DataFrame(data)), unsafe_allow_html=True)
+    st.write(pd.DataFrame(data))
+    st.markdown(get_csv_download_link(pd.DataFrame(data)), unsafe_allow_html=True)
 
 # About the App section in the sidebar
 st.sidebar.header("About the TitleMetaInator")
